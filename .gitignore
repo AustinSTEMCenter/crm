@@ -42,3 +42,7 @@ next-env.d.ts
 
 # real contact data (PII) — never commit
 /data/
+
+# AI files
+AGENTS.md
+CLAUDE.md
