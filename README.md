@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ASC CRM (demo)
 
-## Getting Started
+A lightweight CRM for Austin STEM Center: website contact-form inquiries and donors in one
+place, with owners, statuses, follow-up dates, an activity timeline, and email drafts.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 (App Router), React 19, Tailwind CSS 4, Bun
+- Clerk for Google-only sign-in (reuses the admin dashboard's Clerk app). The API also
+  requires a verified `@austinstemcenter.org` email.
+- Upstash Redis for shared data: one hash, `crm:people`, keyed by person id
+
+## Local development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
+bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create `.env.local`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_SECRET_KEY=sk_...
+KV_REST_API_URL=https://...upstash.io
+KV_REST_API_TOKEN=...
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Loading data
 
-## Learn More
+The demo data is a snapshot of the contact form sheet and the donor list, exported as CSV
+to `data/contact-sheet.csv` and `data/donors.csv`. `data/` holds real contact information.
+It is gitignored and excluded from Vercel uploads, so never commit it.
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+bun scripts/seed.ts          # loads the CSVs into Redis if crm:people is empty
+bun scripts/seed.ts --force  # replaces everything in crm:people
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+After that, use **Import from Sheet** on the Inquiries or Donors page to add new rows.
+Rows that were already imported are skipped.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploying
 
-## Deploy on Vercel
+Set the four environment variables above in the Vercel project. The raw CSVs are not
+needed there, because the app reads everything from Redis.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Layout
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `app/(crm)/`: pages (Today, Inquiries, Donors, Everyone, Pipeline, person detail)
+- `app/api/people/`: GET/POST for shared data (ASC accounts only)
+- `lib/store.ts`: browser store with instant edits and background saves
+- `lib/data.ts`: sheet import and merge logic
+- `lib/server/`: Redis access and the ASC account check
+- `proxy.ts`: sends signed-out visitors to `/sign-in`
