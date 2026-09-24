@@ -9,6 +9,8 @@ export const ALLOWED_EMAIL_DOMAIN = "austinstemcenter.org";
 /** Emails from our own domain are internal test submissions. */
 const isInternal = (email: string) => email.toLowerCase().endsWith(`@${ALLOWED_EMAIL_DOMAIN}`);
 
+const squish = (s: string) => s.replace(/\s+/g, " ").trim();
+
 /**
  * Merge rows from the contact form sheet (CSV, keyed by lower-cased header) into people.
  * Matches by email; new people start as New with a follow-up 1 week after submitting.
@@ -41,9 +43,12 @@ export function mergeContactRows(existingPeople: Person[], rows: Record<string, 
       form: (row["form"] ?? "").trim() || "contact",
       clickupTaskId: (row["clickup task id"] ?? "").trim() || undefined,
     };
-    // Same topic + message from the same person = already imported.
+    // Same topic + message from the same person = already imported. Whitespace is ignored
+    // because Sheets exports keep line breaks that older snapshots collapsed to spaces.
     const isDupe = (p: Person) =>
-      p.submissions.some((s) => s.topic === submission.topic && s.message === submission.message);
+      p.submissions.some(
+        (s) => s.topic === submission.topic && squish(s.message) === squish(submission.message),
+      );
 
     const idx = email ? byEmail.get(email.toLowerCase()) : undefined;
     if (idx !== undefined) {
